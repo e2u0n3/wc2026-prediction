@@ -724,14 +724,20 @@ function renderBoard() {
     '<p class="sl" style="margin-top:4px">실시간 현황 (' + total + '명)</p>' +
 
     // 도넛
-    '<div class="cc"><div class="ct">🗳️ 실시간 투표 현황</div>' +
-    '<div class="dw"><div class="dcw"><canvas id="donut-cv" width="130" height="130"></canvas>' +
-    '<div class="dcenter"><div class="dcv">' + total + '</div><div class="dcl">총 참가</div></div></div>' +
+    '<div class="cc">' +
+    '<div class="ct">🗳️ 실시간 투표 현황</div>' +
+    '<div class="dw">' +
+    '<div class="dcw">' +
+    '<canvas id="donut-cv" width="130" height="130"></canvas>' +
+    '<div class="dcenter"><div class="dcv">' + total + '</div><div class="dcl">총 참가</div></div>' +
+    '</div>' +
     '<div class="dleg">' +
     '<div class="lr"><div class="ld" style="background:#1e8449"></div><div class="ll">🇰🇷 한국 승</div><div class="lp">' + Math.round(korW/total*100) + '%</div></div>' +
     '<div class="lr"><div class="ld" style="background:#95a5a6"></div><div class="ll">🤝 무승부</div><div class="lp">' + Math.round(draws/total*100) + '%</div></div>' +
     '<div class="lr"><div class="ld" style="background:#e74c3c"></div><div class="ll">🇿🇦 남아공 승</div><div class="lp">' + Math.round(rsaW/total*100) + '%</div></div>' +
-    '</div></div></div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
 
     // 확신도
     '<div class="cc"><div class="ct">🌡️ 팀 평균 한국 승리 확신도</div>' +
