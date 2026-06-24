@@ -71,6 +71,7 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 .wrap{max-width:560px;margin:0 auto;padding:0 20px 80px}
 .pnl{display:none;padding:18px 0}
 .pnl.on{display:block}
+#board-inner{display:flex;flex-direction:column;gap:0;width:100%}
 .sl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:8px;margin-top:20px}
 .sl:first-child{margin-top:0}
 
@@ -139,7 +140,7 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 .sl2{font-size:10px;color:rgba(255,255,255,.5);margin-top:3px}
 
 /* CHART CARD */
-.cc{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1)}
+.cc{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);display:block;width:100%;clear:both}
 .ct{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:14px}
 
 /* DONUT */
@@ -178,18 +179,18 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 .bd2{background:#f5f5f5;color:#666}
 
 /* CLOUD */
-.cld{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);min-height:180px;overflow:hidden}
+.cld{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);min-height:180px;overflow:hidden;display:block;width:100%;clear:both}
 .cldstg{position:relative;height:130px}
 .cln{position:absolute;font-size:14px;font-weight:700;color:var(--pd);background:#eef7f2;border:1.5px solid #b2dfc4;border-radius:20px;padding:5px 13px;white-space:nowrap;animation:flt linear infinite;user-select:none}
 @keyframes flt{0%,100%{transform:translateY(0) rotate(var(--r))}33%{transform:translateY(-8px) rotate(var(--r))}66%{transform:translateY(4px) rotate(var(--r))}}
 
 /* CHEER */
-.chc{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1)}
+.chc{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);display:block;width:100%;clear:both}
 .chi{padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px;color:var(--tx);line-height:1.5}
 .chi:last-child{border-bottom:none;padding-bottom:0}
 
 /* HALL */
-.hall{background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:18px;margin-bottom:12px}
+.hall{background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:18px;margin-bottom:12px;display:block;width:100%;clear:both}
 .ht{font-size:15px;font-weight:900;color:var(--gold);margin-bottom:6px}
 .hd{font-size:12px;color:rgba(255,255,255,.55);line-height:1.7;margin-bottom:12px}
 .hemp{text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px}
@@ -625,6 +626,7 @@ if (PRED) {
 // 현황판 렌더
 // ──────────────────────────────
 function renderBoard() {
+  if (donutCh) { donutCh.destroy(); donutCh = null; }
   var el = document.getElementById('board-inner');
   if (!allPreds.length) {
     el.innerHTML = '<div class="emp"><div class="empi">📭</div><div class="empt">아직 예측한 사람이 없어요.<br/>첫 번째로 등록해보세요!</div></div>';
@@ -657,7 +659,7 @@ function renderBoard() {
     var pct  = Math.round(s.count / maxSc * 100);
     return '<div class="br"><div class="bl">' + s.rsa + ':' + s.kor + '</div>' +
       '<div class="bt"><div class="bf ' + barcls(s.rsa, s.kor) + '" style="width:' + Math.max(pct,8) + '%">' +
-      '<span class="bc">' + s.count + '명</span></div></div>';
+      '<span class="bc">' + s.count + '명</span></div></div></div>';
   }).join('');
 
   // TOP3
@@ -765,7 +767,6 @@ function renderBoard() {
   requestAnimationFrame(function() {
     var canvas = document.getElementById('donut-cv');
     if (!canvas) return;
-    if (donutCh) { donutCh.destroy(); donutCh = null; }
     donutCh = new Chart(canvas, {
       type: 'doughnut',
       data: { datasets: [{ data: [korW, draws, rsaW], backgroundColor: ['#1e8449','#95a5a6','#e74c3c'], borderWidth: 0, hoverOffset: 4 }] },
