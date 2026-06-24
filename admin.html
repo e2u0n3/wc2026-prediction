@@ -112,6 +112,18 @@ tr:hover td{background:#f9fdf9}
 .hall-detail{font-size:12px;color:var(--mu);margin-top:2px}
 .hall-empty{text-align:center;padding:30px;color:var(--fa);font-size:13px}
 
+/* COMMUNITY SELECT */
+.comm-select{padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-weight:700;cursor:pointer;outline:none}
+.comm-select option{color:#1a1a1a}
+
+/* CHAT ADMIN */
+.chat-admin-list{display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto}
+.chat-admin-item{display:flex;align-items:flex-start;gap:10px;background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:10px 12px}
+.cai-main{flex:1;min-width:0}
+.cai-nick{font-size:12px;font-weight:800;color:var(--p)}
+.cai-time{font-size:10px;color:var(--fa);margin-left:6px;font-weight:600}
+.cai-msg{font-size:13px;color:var(--tx);margin-top:3px;line-height:1.45;word-break:break-word;overflow-wrap:break-word}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:#111;color:#fff;padding:12px 24px;border-radius:24px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -136,7 +148,7 @@ tr:hover td{background:#f9fdf9}
     </div>
     <div class="lock-err" id="pw-err"></div>
     <button class="btn-unlock" id="btn-unlock">🔓 입장하기</button>
-    <div class="lock-hint">기본 비밀번호: <strong>admin1234</strong></div>
+    <div class="lock-hint">관리자에게 문의하세요.</div>
   </div>
 </div>
 
@@ -146,9 +158,16 @@ tr:hover td{background:#f9fdf9}
   <div class="hdr">
     <div>
       <div class="hdr-title">⚙️ 승부예측 관리자</div>
-      <div class="hdr-sub">🇿🇦 남아공 vs 대한민국 🇰🇷 · 2026 FIFA 월드컵</div>
+      <div class="hdr-sub" id="hdr-sub">🇿🇦 남아공 vs 대한민국 🇰🇷 · 2026 FIFA 월드컵</div>
     </div>
-    <button class="btn-logout" id="btn-logout">🔒 로그아웃</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <select id="comm-select" class="comm-select" title="관리할 커뮤니티 선택">
+        <option value="genoray">🏢 제노레이</option>
+        <option value="family">👨‍👩‍👧‍👦 가족</option>
+        <option value="yogeotbio">🧬 요엇바이오</option>
+      </select>
+      <button class="btn-logout" id="btn-logout">🔒 로그아웃</button>
+    </div>
   </div>
 
   <div class="body">
@@ -233,6 +252,17 @@ tr:hover td{background:#f9fdf9}
       </div>
     </div>
 
+    <!-- 채팅 관리 -->
+    <div class="section">
+      <div class="sec-title">💬 실시간 채팅 관리 <span class="badge" id="chat-cnt">0개</span></div>
+      <div class="actions">
+        <button class="btn-danger" id="btn-delete-chat">🗑️ 이 커뮤니티 채팅 전체 삭제</button>
+      </div>
+      <div class="chat-admin-list" id="chat-admin-list">
+        <div class="empty">채팅이 없어요.</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -249,18 +279,35 @@ firebase.initializeApp({
   messagingSenderId: "753094920391",
   appId: "1:753094920391:web:7e3dbd9f6c8a3fa0ab96e2"
 });
-var db   = firebase.database();
-var PRED = db.ref('predictions_rsa');
+var db = firebase.database();
+
+// ── 커뮤니티 ──
+var COMMUNITIES = {
+  genoray:   { name: '제노레이',   emoji: '🏢' },
+  family:    { name: '가족',       emoji: '👨‍👩‍👧‍👦' },
+  yogeotbio: { name: '요엇바이오', emoji: '🧬' }
+};
+var COMM = 'genoray';
+var PRED = db.ref('predictions_rsa_' + COMM);
+var CHAT = db.ref('chat_rsa_' + COMM);
 
 // ── 상태 ──
 var ADMIN_PW = 'admin1234';
 var allPreds = []; // [{key, ...data}]
+var allChats = [];
 
 // ── 토스트 ──
 function toast(msg) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('on');
   setTimeout(function(){ el.classList.remove('on'); }, 2800);
+}
+
+// ── HTML 이스케이프 ──
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
 }
 
 // ════════════════════════════
@@ -276,6 +323,11 @@ document.getElementById('btn-logout').addEventListener('click', function(){
   document.getElementById('admin-body').style.display = 'none';
   document.getElementById('lock-screen').style.display = 'flex';
   document.getElementById('pw-input').value = '';
+});
+document.getElementById('comm-select').addEventListener('change', function(){
+  COMM = this.value;
+  startListen();
+  toast(COMMUNITIES[COMM].emoji + ' ' + COMMUNITIES[COMM].name + ' 커뮤니티로 전환했어요');
 });
 
 function tryUnlock() {
@@ -297,6 +349,11 @@ function tryUnlock() {
 // Firebase 리스너
 // ════════════════════════════
 function startListen() {
+  PRED.off(); CHAT.off();
+  PRED = db.ref('predictions_rsa_' + COMM);
+  CHAT = db.ref('chat_rsa_' + COMM);
+  updateCommLabel();
+
   PRED.on('value', function(snap) {
     allPreds = [];
     if (snap.exists()) {
@@ -311,6 +368,21 @@ function startListen() {
     renderTable();
     renderHall();
   });
+
+  CHAT.on('value', function(snap) {
+    allChats = [];
+    if (snap.exists()) {
+      snap.forEach(function(c){ var d = c.val(); d._key = c.key; allChats.push(d); });
+    }
+    allChats.sort(function(a,b){ return (a.at||0) - (b.at||0); });
+    renderChatAdmin();
+  });
+}
+
+function updateCommLabel() {
+  var info = COMMUNITIES[COMM];
+  document.getElementById('hdr-sub').textContent =
+    info.emoji + ' ' + info.name + ' · 🇿🇦 남아공 vs 대한민국 🇰🇷';
 }
 
 // ════════════════════════════
@@ -449,6 +521,40 @@ document.getElementById('btn-delete-all').addEventListener('click', function() {
 
 document.getElementById('btn-refresh').addEventListener('click', function() {
   toast('새로고침 완료!');
+});
+
+// ════════════════════════════
+// 채팅 관리
+// ════════════════════════════
+function renderChatAdmin() {
+  document.getElementById('chat-cnt').textContent = allChats.length + '개';
+  var el = document.getElementById('chat-admin-list');
+  if (!allChats.length) {
+    el.innerHTML = '<div class="empty">채팅이 없어요.</div>';
+    return;
+  }
+  el.innerHTML = allChats.slice().reverse().map(function(c) {
+    var t = c.at ? new Date(c.at).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return '<div class="chat-admin-item">' +
+      '<div class="cai-main">' +
+      '<div><span class="cai-nick">' + esc(c.nick||'익명') + '</span><span class="cai-time">' + t + '</span></div>' +
+      '<div class="cai-msg">' + esc(c.msg||'') + '</div></div>' +
+      '<button class="btn-del" onclick="deleteChat(\'' + c._key + '\')">삭제</button></div>';
+  }).join('');
+}
+
+function deleteChat(key) {
+  if (!confirm('이 채팅을 삭제할까요?')) return;
+  CHAT.child(key).remove()
+    .then(function(){ toast('채팅 삭제 완료'); })
+    .catch(function(){ toast('삭제 실패'); });
+}
+
+document.getElementById('btn-delete-chat').addEventListener('click', function() {
+  if (!confirm('⚠️ [' + COMMUNITIES[COMM].name + '] 커뮤니티의 채팅을 전체 삭제할까요?\n되돌릴 수 없어요!')) return;
+  CHAT.remove()
+    .then(function(){ toast('채팅 전체 삭제됨'); })
+    .catch(function(){ toast('삭제 실패'); });
 });
 
 // ════════════════════════════

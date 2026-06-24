@@ -1,0 +1,13 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "$node": {
+      ".read": "$node.matches(/^(predictions_rsa|chat_rsa)_(genoray|family|yogeotbio)$/)",
+      ".write": "$node.matches(/^(predictions_rsa|chat_rsa)_(genoray|family|yogeotbio)$/)",
+      "$item": {
+        ".validate": "!$node.matches(/^chat_rsa_/) || (newData.hasChild('nick') && newData.hasChild('msg') && newData.child('msg').isString() && newData.child('msg').val().length <= 200 && newData.child('nick').isString() && newData.child('nick').val().length <= 30)"
+      }
+    }
+  }
+}
