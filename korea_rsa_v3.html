@@ -184,7 +184,6 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 .bub{position:relative;display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#eef7f2;border:1.5px solid #b2dfc4;border-radius:16px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--pd);animation:bubpop .4s cubic-bezier(.34,1.56,.64,1) both}
 .bub::after{content:'';position:absolute;bottom:-7px;left:20px;width:12px;height:12px;background:#eef7f2;border-right:1.5px solid #b2dfc4;border-bottom:1.5px solid #b2dfc4;transform:rotate(45deg)}
 .bubn{word-break:break-word;overflow-wrap:break-word;min-width:0}
-.bubc{flex-shrink:0;font-size:11px;font-weight:800;color:#fff;background:var(--p);border-radius:10px;padding:2px 8px}
 @keyframes bubpop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* CHEER */
@@ -214,6 +213,22 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 .tnum{width:28px;height:28px;border-radius:50%;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--mu);flex-shrink:0}
 .tt{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:3px}
 .td{font-size:12px;color:var(--mu);line-height:1.6}
+
+/* CHAT */
+.chatbox{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:4px 2px 12px;margin-bottom:10px}
+.chatmsg{display:flex;flex-direction:column;gap:3px}
+.chatn{font-size:11px;font-weight:800;color:var(--p);word-break:break-word;overflow-wrap:break-word}
+.chattime{font-size:10px;font-weight:600;color:var(--fa);margin-left:4px}
+.chatt{font-size:13px;color:var(--tx);line-height:1.45;word-break:break-word;overflow-wrap:break-word;background:#f3f7f4;border-radius:10px;padding:8px 12px;align-self:flex-start;max-width:100%}
+.chatempty{text-align:center;color:var(--fa);font-size:12px;line-height:1.7;padding:26px 0}
+.chatform{display:flex;gap:8px}
+.chatinput{flex:1;min-width:0;padding:11px 13px;border:1.5px solid var(--bd);border-radius:9px;font-size:14px;color:var(--tx);background:#fafcfa;outline:none;transition:border-color .2s}
+.chatinput:focus{border-color:var(--p);background:#fff}
+.chatinput:disabled{background:#f0f0f0;color:#999;cursor:not-allowed}
+.chatsend{padding:11px 18px;background:var(--p);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;transition:opacity .2s}
+.chatsend:hover{opacity:.88}
+.chatsend:disabled{background:#bbb;cursor:not-allowed;opacity:.7}
+.chatnote{font-size:11px;color:#c07800;background:#fffbea;border:1px solid #f0d060;border-radius:6px;padding:7px 10px;margin-top:9px;line-height:1.5;text-align:center}
 
 /* EMPTY / TOAST */
 .emp{text-align:center;padding:40px 20px}
@@ -374,6 +389,16 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
     <!-- 현황판 -->
     <div id="pnl-board" class="pnl">
       <div id="board-inner"><div class="emp"><div class="empi">⏳</div><div class="empt">데이터 불러오는 중...</div></div></div>
+      <p class="sl">실시간 응원 채팅</p>
+      <div class="cc">
+        <div class="ct">💬 실시간 응원 채팅</div>
+        <div id="chat-msgs" class="chatbox"><div class="chatempty">아직 메시지가 없어요.<br/>첫 응원을 남겨보세요! 🇰🇷</div></div>
+        <div class="chatform">
+          <input type="text" id="chat-input" class="chatinput" placeholder="응원 메시지를 입력하세요..." maxlength="100"/>
+          <button id="chat-send" class="chatsend">전송</button>
+        </div>
+        <div id="chat-note" class="chatnote" style="display:none"></div>
+      </div>
     </div>
 
     <!-- 경품 -->
@@ -410,6 +435,7 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 // Firebase 초기화 (에러 격리)
 // ──────────────────────────────
 var PRED = null;
+var CHAT = null;
 try {
   firebase.initializeApp({
   apiKey: "AIzaSyBwSJ4a-dqTN9QfagbNYG3cCKXnaZZsfHA",
@@ -422,6 +448,7 @@ try {
   });
   var db = firebase.database();
   PRED = db.ref('predictions_rsa');
+  CHAT = db.ref('chat_rsa');
 } catch(e) {
   console.warn('Firebase 초기화 실패:', e);
 }
@@ -432,6 +459,8 @@ try {
 var myNick   = '';
 var allPreds = [];
 var donutCh  = null;
+var chatMsgs = [];
+var lastChatAt = 0;
 
 try { myNick = localStorage.getItem('wc26_nick') || ''; } catch(e) {}
 
@@ -468,7 +497,7 @@ function switchTab(name) {
     document.getElementById('pnl-' + n).classList.toggle('on', n === name);
     document.getElementById('tab-' + n).classList.toggle('on', n === name);
   });
-  if (name === 'board') renderBoard();
+  if (name === 'board') { renderBoard(); renderChat(); }
 }
 
 function lockPredictTab() {
@@ -624,6 +653,7 @@ if (PRED) {
     if (snap.exists()) snap.forEach(function(c){ allPreds.push(c.val()); });
     if (document.getElementById('pnl-board').classList.contains('on')) renderBoard();
     if (myNick && document.getElementById('form-area').style.display !== 'none') checkAlreadySubmitted();
+    updateChatGate();
   });
 }
 
@@ -700,10 +730,9 @@ function renderBoard() {
   var cloudHtml = '';
   if (watcherList.length) {
     cloudHtml = watcherList.slice(0,20).map(function(item, i) {
-      var nm = item[0], cnt = item[1];
+      var nm = item[0];
       return '<div class="bub" style="animation-delay:' + (i*0.05).toFixed(2) + 's">' +
-        '🔥 <span class="bubn">' + nm + '</span>' +
-        '<span class="bubc">' + cnt + '표</span></div>';
+        '🔥 <span class="bubn">' + nm + '</span></div>';
     }).join('');
   }
 
@@ -779,6 +808,96 @@ function renderBoard() {
     });
   });
 }
+
+// ──────────────────────────────
+// 실시간 채팅
+// ──────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts), h = d.getHours(), m = d.getMinutes();
+  return (h<10?'0':'') + h + ':' + (m<10?'0':'') + m;
+}
+
+// 예측 등록자만 채팅 가능 (localStorage 닉 + 예측 목록에 존재)
+function isRegistered() {
+  if (!myNick) return false;
+  if (!allPreds.length) return true; // 예측 목록 로딩 전이면 우선 허용
+  return allPreds.some(function(p){ return p.nick === myNick; });
+}
+
+function updateChatGate() {
+  var inp  = document.getElementById('chat-input');
+  var btn  = document.getElementById('chat-send');
+  var note = document.getElementById('chat-note');
+  if (!inp || !btn) return;
+  if (isRegistered()) {
+    inp.disabled = false; btn.disabled = false;
+    inp.placeholder = '응원 메시지를 입력하세요...';
+    note.style.display = 'none';
+  } else {
+    inp.disabled = true; btn.disabled = true; inp.value = '';
+    inp.placeholder = '예측 등록 후 채팅할 수 있어요';
+    note.textContent = '🔒 예측을 먼저 등록하면 채팅에 참여할 수 있어요.';
+    note.style.display = 'block';
+  }
+}
+
+function renderChat() {
+  var box = document.getElementById('chat-msgs');
+  if (!box) return;
+  if (!chatMsgs.length) {
+    box.innerHTML = '<div class="chatempty">아직 메시지가 없어요.<br/>첫 응원을 남겨보세요! 🇰🇷</div>';
+  } else {
+    var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = chatMsgs.map(function(m){
+      return '<div class="chatmsg">' +
+        '<div class="chatn">' + escHtml(m.nick || '익명') + '<span class="chattime">' + fmtTime(m.at) + '</span></div>' +
+        '<div class="chatt">' + escHtml(m.msg || '') + '</div></div>';
+    }).join('');
+    if (nearBottom) box.scrollTop = box.scrollHeight;
+  }
+  updateChatGate();
+}
+
+function sendChat() {
+  if (!isRegistered()) { toast('예측 등록 후 채팅할 수 있어요 🔒'); return; }
+  var inp = document.getElementById('chat-input');
+  var msg = inp.value.trim();
+  if (!msg) return;
+  var now = Date.now();
+  if (now - lastChatAt < 3000) {
+    toast('잠시 후 다시 보내주세요 ⏳ (3초 쿨다운)');
+    return;
+  }
+  if (!CHAT) { toast('채팅 연결 오류. 새로고침해주세요.'); return; }
+  lastChatAt = now;
+  inp.value = '';
+  CHAT.push({ nick: myNick, msg: msg, at: now })
+    .catch(function(err){ console.error(err); toast('전송 오류가 발생했어요.'); lastChatAt = 0; });
+}
+
+document.getElementById('chat-send').addEventListener('click', sendChat);
+document.getElementById('chat-input').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+});
+
+if (CHAT) {
+  CHAT.on('value', function(snap) {
+    chatMsgs = [];
+    if (snap.exists()) snap.forEach(function(c){ chatMsgs.push(c.val()); });
+    chatMsgs.sort(function(a,b){ return (a.at||0) - (b.at||0); });
+    if (chatMsgs.length > 50) chatMsgs = chatMsgs.slice(-50); // 최근 50개만
+    if (document.getElementById('pnl-board').classList.contains('on')) renderChat();
+  });
+}
+
+updateChatGate();
 </script>
 </body>
 </html>
