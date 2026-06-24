@@ -361,12 +361,12 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
           </div>
         </div>
 
-        <p class="sl">응원 한마디 <span style="font-size:9px;letter-spacing:0;text-transform:none;color:rgba(255,255,255,.35)">(선택 · 익명)</span></p>
+        <p class="sl">응원 한마디</p>
         <div class="card">
           <div class="fld"><input type="text" id="inp-cheer" placeholder="예: 손흥민 해트트릭 가즈아!!" maxlength="40"/></div>
         </div>
 
-        <p class="sl">오늘 가장 열심히 볼 사람은? <span style="font-size:9px;letter-spacing:0;text-transform:none;color:rgba(255,255,255,.35)">(선택)</span></p>
+        <p class="sl">오늘 가장 열심히 볼 사람은?</p>
         <div class="card">
           <div class="fld"><input type="text" id="inp-watcher" placeholder="예: 박지훈 팀장님" maxlength="20"/></div>
         </div>
@@ -625,6 +625,9 @@ document.getElementById('btn-submit').addEventListener('click', function() {
 
   if (!nick) { toast('닉네임을 입력해주세요 😊'); return; }
   if (!name) { toast('실명을 입력해주세요 (경품 수령용)'); return; }
+  if (!scorer) { toast('예상 득점 선수를 선택해주세요 ⚽'); return; }
+  if (!cheer) { toast('응원 한마디를 입력해주세요 📣'); return; }
+  if (!watcher) { toast('오늘 가장 열심히 볼 사람을 입력해주세요 🔥'); return; }
   if (allPreds.some(function(p){ return p.nick === nick; })) {
     toast('이미 같은 닉네임으로 등록됐어요!'); return;
   }
