@@ -434,6 +434,22 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 // ──────────────────────────────
 // Firebase 초기화 (에러 격리)
 // ──────────────────────────────
+// ──────────────────────────────
+// 커뮤니티 결정 (URL ?c= 파라미터)
+// ──────────────────────────────
+var COMMUNITIES = {
+  genoray:   { name: '제노레이',   emoji: '🏢' },
+  family:    { name: '가족',       emoji: '👨‍👩‍👧‍👦' },
+  yogeotbio: { name: '요엇바이오', emoji: '🧬' }
+};
+var COMM = 'genoray'; // 파라미터 없거나 잘못되면 기본값
+try {
+  var _c = new URLSearchParams(location.search).get('c');
+  if (_c && COMMUNITIES[_c]) COMM = _c;
+} catch(e) {}
+var COMM_INFO = COMMUNITIES[COMM];
+var NICK_KEY  = 'wc26_nick_' + COMM; // 커뮤니티별 닉 분리
+
 var PRED = null;
 var CHAT = null;
 try {
@@ -447,8 +463,8 @@ try {
   appId: "1:753094920391:web:7e3dbd9f6c8a3fa0ab96e2"
   });
   var db = firebase.database();
-  PRED = db.ref('predictions_rsa');
-  CHAT = db.ref('chat_rsa');
+  PRED = db.ref('predictions_rsa_' + COMM);
+  CHAT = db.ref('chat_rsa_' + COMM);
 } catch(e) {
   console.warn('Firebase 초기화 실패:', e);
 }
@@ -462,7 +478,7 @@ var donutCh  = null;
 var chatMsgs = [];
 var lastChatAt = 0;
 
-try { myNick = localStorage.getItem('wc26_nick') || ''; } catch(e) {}
+try { myNick = localStorage.getItem(NICK_KEY) || ''; } catch(e) {}
 
 // ──────────────────────────────
 // 유틸
@@ -524,8 +540,24 @@ document.getElementById('btn-confirm').addEventListener('click', function() {
 document.getElementById('btn-already').addEventListener('click', function() {
   showApp();
   lockPredictTab();
+  if (!myNick) returningLogin();
   switchTab('board');
 });
+
+// 재방문자(이미 예측한 사람) 본인 확인 — 채팅 참여용
+function returningLogin() {
+  var nick = (prompt('등록하신 닉네임을 입력해주세요.\n(채팅 참여 및 본인 예측 확인에 사용돼요)') || '').trim();
+  if (!nick) return;
+  // 예측 목록이 이미 로딩됐으면 검증
+  if (allPreds.length && !allPreds.some(function(p){ return p.nick === nick; })) {
+    toast('해당 닉네임의 예측을 찾을 수 없어요 🤔');
+    return;
+  }
+  myNick = nick;
+  try { localStorage.setItem(NICK_KEY, myNick); } catch(e) {}
+  checkAlreadySubmitted();
+  updateChatGate();
+}
 
 // ──────────────────────────────
 // 칩 (단일 선택)
@@ -600,7 +632,7 @@ document.getElementById('btn-submit').addEventListener('click', function() {
               watcher: watcher, at: Date.now() })
     .then(function() {
       myNick = nick;
-      try { localStorage.setItem('wc26_nick', myNick); } catch(e) {}
+      try { localStorage.setItem(NICK_KEY, myNick); } catch(e) {}
       showDone({ nick: nick, rsa: rsa, kor: kor });
       toast('예측 완료! 대~한민국! 🇰🇷⚽');
     })
@@ -896,6 +928,19 @@ if (CHAT) {
     if (document.getElementById('pnl-board').classList.contains('on')) renderChat();
   });
 }
+
+// ──────────────────────────────
+// 커뮤니티 라벨 표시
+// ──────────────────────────────
+function applyCommunity() {
+  var label = COMM_INFO.emoji + ' ' + COMM_INFO.name;
+  var eb = document.querySelector('.eyebrow');
+  if (eb) eb.textContent = COMM_INFO.name + ' 리그 · 2026 FIFA 월드컵';
+  var aey = document.querySelector('.aey');
+  if (aey) aey.innerHTML = '2026 FIFA 월드컵 · <span style="color:var(--gold)">' + label + '</span>';
+  document.title = label + ' · 승부예측';
+}
+applyCommunity();
 
 updateChatGate();
 </script>
