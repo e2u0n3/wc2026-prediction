@@ -403,7 +403,9 @@ body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:
 
     <!-- 경품 -->
     <div id="pnl-prize" class="pnl">
-      <p class="sl" style="margin-top:4px">경품 안내</p>
+      <p class="sl" style="margin-top:4px">예측왕 명예의 전당</p>
+      <div id="hall-area"></div>
+      <p class="sl">경품 안내</p>
       <div class="ph">
         <div class="pt">⚽ 월드콘 이벤트</div>
         <div class="pd2">승부 예측을 정확히 맞힌 분들께<br/><strong style="color:var(--gold)">월드콘 아이스크림</strong>을 드립니다!</div>
@@ -514,6 +516,7 @@ function switchTab(name) {
     document.getElementById('tab-' + n).classList.toggle('on', n === name);
   });
   if (name === 'board') { renderBoard(); renderChat(); }
+  if (name === 'prize') renderHall();
 }
 
 function lockPredictTab() {
@@ -540,7 +543,7 @@ document.getElementById('btn-confirm').addEventListener('click', function() {
 document.getElementById('btn-already').addEventListener('click', function() {
   showApp();
   lockPredictTab();
-  if (!myNick) returningLogin();
+  returningLogin();
   switchTab('board');
 });
 
@@ -684,6 +687,7 @@ if (PRED) {
     allPreds = [];
     if (snap.exists()) snap.forEach(function(c){ allPreds.push(c.val()); });
     if (document.getElementById('pnl-board').classList.contains('on')) renderBoard();
+    if (document.getElementById('pnl-prize').classList.contains('on')) renderHall();
     if (myNick && document.getElementById('form-area').style.display !== 'none') checkAlreadySubmitted();
     updateChatGate();
   });
@@ -772,14 +776,6 @@ function renderBoard() {
   var cheers = allPreds.filter(function(p){ return p.cheer && p.cheer.trim(); })
     .sort(function(a,b){ return b.at - a.at; }).slice(0, 6);
 
-  // 명예의 전당
-  var winners = allPreds.filter(function(p){ return p._winner; });
-  var hallHtml = winners.length
-    ? winners.map(function(p){
-        return '<div class="hw"><span style="font-size:20px">🏆</span><div><div class="hwn">' + p.nick + '</div><div class="hwd">' + p.rsa + ':' + p.kor + ' · ' + (p.scorer||'득점 미선택') + '</div></div></div>';
-      }).join('')
-    : '<div class="hemp">경기가 끝나면 여기에 예측왕이 등장해요! 👑<br/><span style="font-size:11px">스코어를 정확히 맞힌 분들이 표시됩니다</span></div>';
-
   el.innerHTML =
     '<p class="sl" style="margin-top:4px">실시간 현황 (' + total + '명)</p>' +
 
@@ -822,12 +818,9 @@ function renderBoard() {
 
     // 응원
     (cheers.length ? '<div class="chc"><div class="ct">💬 응원 한마디</div>' +
-      cheers.map(function(p){ return '<div class="chi"><span class="chn">' + (p.nick || '익명') + '</span><span class="cht">⚽ ' + p.cheer + '</span></div>'; }).join('') + '</div>' : '') +
+      cheers.map(function(p){ return '<div class="chi"><span class="chn">' + (p.nick || '익명') + '</span><span class="cht">⚽ ' + p.cheer + '</span></div>'; }).join('') + '</div>' : '');
 
-    // 명예의 전당
-    '<div class="hall"><div class="ht">👑 예측왕 명예의 전당</div>' +
-    '<div class="hd">경기 종료 후 스코어를 정확히 맞힌 분들이 여기에 등장해요!</div>' +
-    hallHtml + '</div>';
+  renderHall();
 
   // 도넛 차트
   requestAnimationFrame(function() {
@@ -839,6 +832,23 @@ function renderBoard() {
       options: { cutout: '68%', responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 800 } }
     });
   });
+}
+
+// ──────────────────────────────
+// 예측왕 명예의 전당 (경품 탭)
+// ──────────────────────────────
+function renderHall() {
+  var area = document.getElementById('hall-area');
+  if (!area) return;
+  var winners = allPreds.filter(function(p){ return p._winner; });
+  var hallHtml = winners.length
+    ? winners.map(function(p){
+        return '<div class="hw"><span style="font-size:20px">🏆</span><div><div class="hwn">' + escHtml(p.nick) + '</div><div class="hwd">' + p.rsa + ':' + p.kor + ' · ' + escHtml(p.scorer||'득점 미선택') + '</div></div></div>';
+      }).join('')
+    : '<div class="hemp">경기가 끝나면 여기에 예측왕이 등장해요! 👑<br/><span style="font-size:11px">스코어를 정확히 맞힌 분들이 표시됩니다</span></div>';
+  area.innerHTML = '<div class="hall"><div class="ht">👑 예측왕 명예의 전당</div>' +
+    '<div class="hd">경기 종료 후 스코어를 정확히 맞힌 분들이 여기에 등장해요!</div>' +
+    hallHtml + '</div>';
 }
 
 // ──────────────────────────────
